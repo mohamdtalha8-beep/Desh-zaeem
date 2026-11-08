@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>الزعيم TV</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-gradient: linear-gradient(135deg, #2b0b3a 0%, #0a0a1a 50%, #000000 100%);
+    --card-bg: #1a1a2e;
+    --card-hover: #2a2a4e;
+    --accent: #f0bd4a;
+    --text: #ffffff;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+  body { background: var(--bg-gradient); color: var(--text); height: 100vh; overflow: hidden; direction: rtl; }
+  
+  /* الشريط العلوي */
+  .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background: rgba(0,0,0,0.3); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .header h1 { color: var(--accent); font-size: 24px; font-weight: 900; }
+  .time { font-size: 18px; font-weight: 600; color: #ccc; }
+
+  /* منطقة المحتوى */
+  #main-view { padding: 20px 40px; height: calc(100vh - 80px); overflow-y: auto; scroll-behavior: smooth; }
+  #main-view::-webkit-scrollbar { width: 0; }
+
+  .row { margin-bottom: 30px; }
+  .row h2 { font-size: 20px; margin-bottom: 15px; font-weight: 800; color: #e2e2e2; }
+  
+  .cards-container { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; scroll-behavior: smooth; }
+  .cards-container::-webkit-scrollbar { height: 0; }
+
+  /* البطاقات */
+  .card {
+    flex: 0 0 auto; width: 180px; height: 100px; background: var(--card-bg);
+    border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease-in-out; border: 2px solid transparent;
+    text-align: center; padding: 10px;
+  }
+  .card:hover, .card:focus {
+    transform: scale(1.08); border-color: var(--accent); background: var(--card-hover);
+    box-shadow: 0 10px 20px rgba(240, 189, 74, 0.2); outline: none; z-index: 10;
+  }
+  .card img { width: 40px; height: 40px; object-fit: contain; margin-bottom: 8px; border-radius: 6px; }
+  .card span { font-size: 14px; font-weight: 700; color: #fff; }
+
+  /* المشغل */
+  #player { position: fixed; inset: 0; z-index: 100; display: none; background: #000; }
+  #player.open { display: block; }
+  #videoPlayer { width: 100%; height: 100%; object-fit: contain; }
+  #closeBtn { position: absolute; top: 20px; right: 20px; z-index: 101; padding: 10px 20px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid #555; border-radius: 8px; cursor: pointer; font-weight: bold; }
+  #closeBtn:focus { background: var(--accent); color: #000; border-color: var(--accent); outline: none; }
+
+  @media (max-width: 800px) {
+    .header { padding: 15px 20px; }
+    #main-view { padding: 15px 20px; }
+    .card { width: 140px; height: 90px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>👑 الزعيم TV</h1>
+    <div class="time" id="clock"></div>
+  </div>
+
+  <div id="main-view">
+    <!-- سيتم بناء الصفوف هنا تلقائياً -->
+  </div>
+
+  <div id="player" tabindex="-1">
+    <video id="videoPlayer" autoplay playsinline></video>
+    <button id="closeBtn">✕ رجوع</button>
+  </div>
+
+<script>
+  // 1. تحديث الساعة
+  setInterval(() => {
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  }, 1000);
+
+  // 2. بيانات التطبيقات (يمكنك تعديلها لاحقاً)
+  const homeData = [
+    {
+      title: 'التطبيقات المفضلة',
+      items: [
+        { name: 'YouTube', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg', url: 'https://www.youtube.com' },
+        { name: 'TizenTube', icon: 'https://cdn-icons-png.flaticon.com/512/888/888839.png', url: '#' },
+        { name: 'Bale', icon: 'https://cdn-icons-png.flaticon.com/512/5968/5968875.png', url: '#' },
+        { name: 'Zaeem', icon: 'https://cdn-icons-png.flaticon.com/512/2586/2586549.png', url: 'https://mohamdtalha8-beep.github.io/Zaeem/' }
+      ]
+    },
+    {
+      title: 'البرامج الموصى بها',
+      items: [
+        { name: 'XMYTV', icon: 'https://cdn-icons-png.flaticon.com/512/2933/2933245.png', url: '#' },
+        { name: 'MYTV', icon: 'https://cdn-icons-png.flaticon.com/512/2933/2933245.png', url: '#' },
+        { name: 'XTREAM', icon: 'https://cdn-icons-png.flaticon.com/512/2886/2886280.png', url: '#' },
+        { name: 'AppStore', icon: 'https://cdn-icons-png.flaticon.com/512/888/888857.png', url: '#' }
+      ]
+    },
+    {
+      title: 'قنوات مباشرة',
+      items: [
+        { name: 'MBC 1', icon: 'https://upload.wikimedia.org/wikipedia/en/thumb/9/9f/MBC_1_Logo.png/200px-MBC_1_Logo.png', url: 'https://shls-live-enc.edgenextcdn.net/out/v1/9b31b5fb73ee47c39a14c8fa9c80d3b6/index.m3u8' },
+        { name: 'الجزيرة', icon: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Al_Jazeera_English_Logo.svg/200px-Al_Jazeera_English_Logo.svg.png', url: 'https://live-hls-web-aja.getaj.net/AJA/index.m3u8' }
+      ]
+    }
+  ];
+
+  const viewEl = document.getElementById('main-view');
+  const player = document.getElementById('player');
+  const video = document.getElementById('videoPlayer');
+  const closeBtn = document.getElementById('closeBtn');
+  let currentCards = [];
+  let focusIndex = 0;
+
+  // 3. رسم الواجهة
+  function renderHome() {
+    viewEl.innerHTML = '';
+    homeData.forEach(row => {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'row';
+      
+      const title = document.createElement('h2');
+      title.textContent = row.title;
+      rowDiv.appendChild(title);
+
+      const container = document.createElement('div');
+      container.className = 'cards-container';
+      
+      row.items.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.tabIndex = 0;
+        
+        // إذا كان رابط (موقع خارجي) نفتحه، وإذا كان بث نفتح المشغل
+        card.onclick = () => {
+          if (item.url && item.url.includes('.m3u8')) {
+            playVideo(item.url);
+          } else if (item.url && item.url !== '#') {
+             window.open(item.url, '_blank');
+          }
+        };
+        
+        card.innerHTML = `<img src="${item.icon}" onerror="this.style.display='none'"> <span>${item.name}</span>`;
+        
+        // إضافة البطاقة لمصفوفة التركيز للتنقل بالريموت
+        currentCards.push(card);
+        container.appendChild(card);
+      });
+
+      rowDiv.appendChild(container);
+      viewEl.appendChild(rowDiv);
+    });
+    
+    // تركيز البطاقة الأولى
+    if(currentCards.length > 0) currentCards[0].focus();
+  }
+
+  // 4. دالة التشغيل
+  function playVideo(url) {
+    player.classList.add('open');
+    player.focus();
+    video.src = url;
+    video.play().catch(e => console.log("خطأ في التشغيل:", e));
+  }
+
+  // 5. إغلاق المشغل
+  closeBtn.onclick = () => {
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    player.classList.remove('open');
+    if(currentCards[focusIndex]) currentCards[focusIndex].focus();
+  };
+
+  // 6. التحكم بالريموت (التنقل)
+  document.addEventListener('keydown', (e) => {
+    if (player.classList.contains('open')) {
+      if (e.key === 'Escape' || e.keyCode === 10009 || e.keyCode === 461) { // زر الرجوع
+        closeBtn.click();
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      moveFocus(1);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      moveFocus(-1);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      // ترك المتصفح يتعامل مع الأعلى والأسفل (لأنه Overflow)
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (document.activeElement.classList.contains('card')) {
+        document.activeElement.click();
+      }
+    }
+  });
+
+  function moveFocus(dir) {
+    const current = document.activeElement;
+    const idx = currentCards.indexOf(current);
+    if (idx === -1) return;
+    
+    let nextIdx = idx + dir;
+    if (nextIdx >= 0 && nextIdx < currentCards.length) {
+      currentCards[nextIdx].focus();
+      currentCards[nextIdx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      focusIndex = nextIdx;
+    }
+  }
+
+  // بدء التطبيق
+  renderHome();
+</script>
+</body>
+</html>

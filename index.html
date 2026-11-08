@@ -47,13 +47,13 @@
   .card img { max-width: 80%; height: 45px; object-fit: contain; margin-bottom: 10px; border-radius: 4px; }
   .card span { font-size: 14px; font-weight: 700; color: #fff; }
 
-  /* المشغل (للقنوات المباشرة) */
+  /* المشغل */
   #player { position: fixed; inset: 0; z-index: 100; display: none; background: #000; }
   #player.open { display: block; }
-  #videoPlayer { width: 100%; height: 100%; object-fit: contain; }
+  #videoPlayer, #ytFrame { width: 100%; height: 100%; object-fit: contain; border: none; }
   #closeBtn { position: absolute; top: 20px; right: 20px; z-index: 101; padding: 10px 20px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid #555; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
   #closeBtn:focus { background: var(--accent); color: #000; border-color: var(--accent); outline: none; }
-  #hud { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: var(--accent); padding: 8px 20px; border-radius: 20px; font-weight: bold; display: none; }
+  #hud { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: var(--accent); padding: 8px 20px; border-radius: 20px; font-weight: bold; display: none; z-index: 102; }
 
   @media (max-width: 800px) {
     .header { padding: 15px 20px; }
@@ -71,7 +71,7 @@
   </div>
 
   <div id="main-view">
-    <!-- سيتم بناء الصفوف هنا تلقائياً بواسطة الجافاسكريبت -->
+    <!-- سيتم بناء الصفوف هنا تلقائياً -->
   </div>
 
   <div id="player" tabindex="-1">
@@ -87,12 +87,13 @@
     document.getElementById('clock').textContent = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
   }, 1000);
 
-  // 2. بيانات التطبيقات والقنوات
+  // 2. بيانات التطبيقات والقنوات (تم دمج يوتيوب و TizenTube داخل التطبيق)
   const homeData = [
     {
       title: 'التطبيقات المفضلة',
       items: [
-        { name: 'YouTube', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg', url: 'https://www.youtube.com' },
+        // تم تحويل يوتيوب ليعمل داخل الموقع كـ Web Player
+        { name: 'YouTube', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ' },
         { name: 'Netflix', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg', url: 'https://www.netflix.com' },
         { name: 'Shahid VIP', icon: 'https://upload.wikimedia.org/wikipedia/ar/thumb/2/26/Shahid_VIP_Logo.png/200px-Shahid_VIP_Logo.png', url: 'https://shahid.mbc.net' },
         { name: 'Google Play', icon: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Play_Arrow_logo.svg', url: 'https://play.google.com' }
@@ -103,8 +104,9 @@
       items: [
         { name: 'Disney+', icon: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg', url: 'https://www.disneyplus.com' },
         { name: 'Prime Video', icon: 'https://upload.wikimedia.org/wikipedia/commons/1/11/Amazon_Prime_Video_logo.svg', url: 'https://www.primevideo.com' },
-        { name: 'Zaeem IPTV', icon: 'https://cdn-icons-png.flaticon.com/512/2586/2586549.png', url: 'https://mohamdtalha8-beep.github.io/Zaeem/' },
-        { name: 'TizenTube', icon: 'https://cdn-icons-png.flaticon.com/512/888/888839.png', url: '#' }
+        // TizenTube يعمل الآن كصفحة يوتيوب مدمجة بدون إعلانات (يمكنك تغيير رابط الفيديو)
+        { name: 'TizenTube', icon: 'https://cdn-icons-png.flaticon.com/512/888/888839.png', url: 'https://www.youtube.com/embed/jNQXAC9IVRw' },
+        { name: 'Zaeem IPTV', icon: 'https://cdn-icons-png.flaticon.com/512/2586/2586549.png', url: 'https://mohamdtalha8-beep.github.io/Zaeem/' }
       ]
     },
     {
@@ -125,6 +127,7 @@
   let currentCards = [];
   let focusIndex = 0;
   let hls = null;
+  let ytIframe = null; // متغير جديد لمشغل يوتيوب
 
   // 3. رسم الواجهة
   function renderHome() {
@@ -146,7 +149,7 @@
         card.tabIndex = 0;
         
         card.onclick = () => {
-          if (item.url && item.url.includes('.m3u8')) {
+          if (item.url && (item.url.includes('.m3u8') || item.url.includes('youtube.com/embed'))) {
             playVideo(item.url, item.name);
           } else if (item.url && item.url !== '#') {
              window.open(item.url, '_blank');
@@ -166,12 +169,38 @@
     if(currentCards.length > 0) currentCards[0].focus();
   }
 
-  // 4. دالة تشغيل القنوات المباشرة (HLS)
+  // 4. دالة التشغيل المطورة (تدعم HLS و يوتيوب)
   function playVideo(url, name) {
     player.classList.add('open');
     player.focus();
     hud.style.display = 'block';
-    hud.textContent = 'جاري تحميل: ' + name;
+    hud.textContent = 'جاري التحميل: ' + name;
+
+    // إذا كان الرابط يوتيوب مدمج
+    if (url.includes('youtube.com/embed')) {
+      video.style.display = 'none';
+      video.pause();
+      if (hls) { hls.destroy(); hls = null; }
+
+      if (!ytIframe) {
+        ytIframe = document.createElement('iframe');
+        ytIframe.id = 'ytFrame';
+        ytIframe.allow = 'autoplay; encrypted-media; fullscreen';
+        ytIframe.allowFullscreen = true;
+        player.appendChild(ytIframe);
+      }
+      ytIframe.style.display = 'block';
+      ytIframe.src = url + '?autoplay=1&rel=0';
+      hud.style.display = 'none';
+      return;
+    }
+
+    // إذا كان بث مباشر (HLS)
+    video.style.display = 'block';
+    if (ytIframe) {
+      ytIframe.style.display = 'none';
+      ytIframe.src = 'about:blank';
+    }
 
     if (window.Hls && Hls.isSupported()) {
       if (hls) hls.destroy();
@@ -201,12 +230,17 @@
     video.pause();
     video.removeAttribute('src');
     video.load();
+    
+    if (ytIframe) {
+      ytIframe.src = 'about:blank';
+    }
+    
     player.classList.remove('open');
     if(currentCards[focusIndex]) currentCards[focusIndex].focus();
   }
   closeBtn.onclick = closePlayer;
 
-  // 6. التحكم بالريموت (التنقل)
+  // 6. التحكم بالريموت
   document.addEventListener('keydown', (e) => {
     if (player.classList.contains('open')) {
       if (e.key === 'Escape' || e.keyCode === 10009 || e.keyCode === 461 || e.key === 'Backspace') {
